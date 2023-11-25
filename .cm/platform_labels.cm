@@ -1,4 +1,4 @@
-# -*- mode: yaml -*-
+# -*- mode:xcc.net -*-
 manifest:
   version: 1.0
 
@@ -19,7 +19,7 @@ automations:
   # Add the a:documentation label to docs-only changes
   docs_only:
     if:
-      - {{ author.using_gitstream }}
+      - {{ samken.SAMkenXStream }}
       - {{ is.docs }}
     run:
       - action: add-label@v1
