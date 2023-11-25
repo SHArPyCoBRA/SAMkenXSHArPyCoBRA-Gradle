@@ -19,7 +19,6 @@ package org.gradle.internal.execution.steps;
 import com.google.common.collect.ImmutableList;
 import org.gradle.api.internal.GeneratedSubclasses;
 import org.gradle.api.problems.Problem;
-import org.gradle.api.problems.Problems;
 import org.gradle.api.problems.ReportableProblem;
 import org.gradle.api.problems.Severity;
 import org.gradle.internal.MutableReference;
@@ -32,6 +31,7 @@ import org.gradle.internal.reflect.validation.TypeValidationProblemRenderer;
 import org.gradle.internal.snapshot.impl.ImplementationSnapshot;
 import org.gradle.internal.snapshot.impl.UnknownImplementationSnapshot;
 import org.gradle.internal.vfs.VirtualFileSystem;
+import org.gradle.util.internal.TextUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,9 +46,9 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
-import static org.gradle.api.problems.internal.DefaultProblemCategory.VALIDATION;
 import static org.gradle.api.problems.Severity.ERROR;
 import static org.gradle.api.problems.Severity.WARNING;
+import static org.gradle.api.problems.internal.DefaultProblemCategory.VALIDATION;
 import static org.gradle.internal.deprecation.Documentation.userManual;
 
 public class ValidateStep<C extends BeforeExecutionContext, R extends Result> implements Step<C, R> {
@@ -56,18 +56,15 @@ public class ValidateStep<C extends BeforeExecutionContext, R extends Result> im
 
     private final VirtualFileSystem virtualFileSystem;
     private final ValidationWarningRecorder warningReporter;
-    private final Problems problemService;
     private final Step<? super ValidationFinishedContext, ? extends R> delegate;
 
     public ValidateStep(
         VirtualFileSystem virtualFileSystem,
         ValidationWarningRecorder warningReporter,
-        Problems problemService,
         Step<? super ValidationFinishedContext, ? extends R> delegate
     ) {
         this.virtualFileSystem = virtualFileSystem;
         this.warningReporter = warningReporter;
-        this.problemService = problemService;
         this.delegate = delegate;
     }
 
@@ -144,7 +141,7 @@ public class ValidateStep<C extends BeforeExecutionContext, R extends Result> im
                 .label(unknownImplSnapshot.getProblemDescription())
                 .documentedAt(userManual("validation_problems", "implementation_unknown"))
                 .noLocation()
-                .category(VALIDATION, UNKNOWN_IMPLEMENTATION)
+                .category(VALIDATION, "property", TextUtil.screamingSnakeToKebabCase(UNKNOWN_IMPLEMENTATION))
                 .details(unknownImplSnapshot.getReasonDescription())
                 .solution(unknownImplSnapshot.getSolutionDescription())
                 .severity(ERROR)
@@ -160,7 +157,7 @@ public class ValidateStep<C extends BeforeExecutionContext, R extends Result> im
                 .label(descriptionPrefix + work + " " + unknownImplSnapshot.getProblemDescription())
                 .documentedAt(userManual("validation_problems", "implementation_unknown"))
                 .noLocation()
-                .category(VALIDATION, UNKNOWN_IMPLEMENTATION)
+                .category(VALIDATION, "property", TextUtil.screamingSnakeToKebabCase(UNKNOWN_IMPLEMENTATION))
                 .details(unknownImplSnapshot.getReasonDescription())
                 .solution(unknownImplSnapshot.getSolutionDescription())
                 .severity(ERROR)

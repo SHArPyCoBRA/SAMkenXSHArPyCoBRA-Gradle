@@ -55,12 +55,13 @@ import org.gradle.configurationcache.serialization.writeEnum
 import org.gradle.configurationcache.serialization.writeStrings
 import org.gradle.configurationcache.services.ConfigurationCacheEnvironmentChangeTracker
 import org.gradle.execution.plan.Node
+import org.gradle.execution.plan.ScheduledWork
 import org.gradle.initialization.BuildIdentifiedProgressDetails
 import org.gradle.initialization.BuildStructureOperationProject
 import org.gradle.initialization.GradlePropertiesController
 import org.gradle.initialization.ProjectsIdentifiedProgressDetails
 import org.gradle.initialization.RootBuildCacheControllerSettingsProcessor
-import org.gradle.initialization.layout.BuildLocations
+import org.gradle.initialization.layout.BuildLayout
 import org.gradle.internal.Actions
 import org.gradle.internal.build.BuildProjectRegistry
 import org.gradle.internal.build.BuildState
@@ -213,7 +214,7 @@ class ConfigurationCacheState(
             for (build in builds) {
                 if (build is BuildWithWork) {
                     builder.withWorkGraph(build.build.state) {
-                        it.setScheduledNodes(build.workGraph)
+                        it.setScheduledWork(build.workGraph)
                     }
                 }
             }
@@ -345,7 +346,7 @@ class ConfigurationCacheState(
 
     private
     fun GradleInternal.loadGradleProperties() {
-        val settingDir = serviceOf<BuildLocations>().settingsDir
+        val settingDir = serviceOf<BuildLayout>().settingsDir
         // Load Gradle properties from a file but skip applying system properties defined here.
         // System properties from the file may be mutated by the build logic, and the execution-time values are already restored by the EnvironmentChangeTracker.
         // Applying properties from file overwrites these modifications.
@@ -422,15 +423,15 @@ class ConfigurationCacheState(
         val state = build.state
         if (state.projectsAvailable) {
             writeBoolean(true)
-            val scheduledNodes = build.scheduledWork
+            val scheduledWork = build.scheduledWork
             withDebugFrame({ "Gradle" }) {
                 writeGradleState(gradle)
-                val projects = collectProjects(state.projects, scheduledNodes, gradle.serviceOf())
+                val projects = collectProjects(state.projects, scheduledWork.scheduledNodes, gradle.serviceOf())
                 writeProjects(gradle, projects)
                 writeRequiredBuildServicesOf(state, buildTreeState)
             }
             withDebugFrame({ "Work Graph" }) {
-                writeWorkGraphOf(gradle, scheduledNodes)
+                writeWorkGraphOf(gradle, scheduledWork)
             }
             withDebugFrame({ "Flow Scope" }) {
                 writeFlowScopeOf(gradle)
@@ -467,9 +468,9 @@ class ConfigurationCacheState(
     }
 
     private
-    suspend fun DefaultWriteContext.writeWorkGraphOf(gradle: GradleInternal, scheduledNodes: List<Node>) {
+    suspend fun DefaultWriteContext.writeWorkGraphOf(gradle: GradleInternal, scheduledWork: ScheduledWork) {
         workNodeCodec(gradle).run {
-            writeWork(scheduledNodes)
+            writeWork(scheduledWork)
         }
     }
 
@@ -569,7 +570,7 @@ class ConfigurationCacheState(
             readCachedEnvironmentState(gradle)
             readPreviewFlags(gradle)
             readFileSystemDefaultExcludes(gradle)
-            // It is important that the Gradle Enterprise plugin be read before
+            // It is important that the Develocity plugin be read before
             // build cache configuration, as it may contribute build cache configuration.
             readGradleEnterprisePluginManager(gradle)
             readBuildCacheConfiguration(gradle)
